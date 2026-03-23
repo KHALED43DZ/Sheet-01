@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="حساب المبيعات" />
+  <title>حساب المبيعات - نادي الأعوان</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --primary: #1a6e3c;
+      --primary-light: #e8f5ee;
+      --accent: #d4a017;
+      --accent-light: #fef9e7;
+      --destructive: #dc2626;
+      --muted: #f4f4f5;
+      --border: #e4e4e7;
+      --bg: #f5f0e8;
+      --card: #ffffff;
+      --text: #18181b;
+      --text-muted: #71717a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100svh; }
+
+    /* Header */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 16px; font-weight: 900; }
+    .header-btns { display: flex; gap: 4px; }
+    .icon-btn {
+      background: none; border: none; color: white; cursor: pointer;
+      padding: 8px; border-radius: 8px; transition: background .2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.15); }
+    .icon-btn svg { width: 20px; height: 20px; }
+
+    /* Settings Panel */
+    #settings-panel {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 16px; display: none; animation: slideDown .2s ease;
+    }
+    #settings-panel.open { display: block; }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    .settings-label { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .shift-btns { display: flex; gap: 10px; }
+    .shift-btn {
+      flex: 1; padding: 12px; border: 2px solid var(--border); background: var(--muted);
+      border-radius: 12px; font-size: 16px; font-weight: 900; cursor: pointer; transition: all .2s;
+    }
+    .shift-btn.active-A { background: #16a34a; color: white; border-color: #16a34a; transform: scale(1.05); }
+    .shift-btn.active-B { background: var(--accent); color: white; border-color: var(--accent); transform: scale(1.05); }
+    .shift-btn.active-C { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); }
+
+    /* Date Nav */
+    .date-nav {
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-btn {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 10px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      transition: all .15s; font-size: 20px; color: var(--primary);
+    }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .nav-btn:not(:disabled):active { transform: scale(0.95); }
+    .date-display { text-align: center; flex: 1; margin: 0 8px; }
+    .date-display p { font-size: 22px; font-weight: 900; }
+
+    /* Exportable area */
+    #export-area { background: var(--bg); }
+
+    /* Card */
+    .card {
+      background: var(--card); border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin: 0 8px;
+      overflow: hidden;
+    }
+
+    /* Table Controls */
+    .table-controls {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+    }
+    .ctrl-btn {
+      background: none; border: none; cursor: pointer; display: flex; align-items: center;
+      gap: 6px; font-size: 13px; font-weight: 700; padding: 4px 8px; border-radius: 6px;
+    }
+    .ctrl-btn.undo { color: var(--primary); }
+    .ctrl-btn.reset { color: var(--destructive); }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .ctrl-btn svg { width: 15px; height: 15px; }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: var(--primary); color: white; }
+    th {
+      padding: 8px 6px; font-size: 12px; font-weight: 700; white-space: nowrap;
+      text-align: center;
+    }
+    th.sep, td.sep { border-right: 2px solid rgba(255,255,255,0.3); }
+    th.sep-d { border-right: 2px solid rgba(26,110,60,0.3); }
+    td { border-bottom: 1px solid rgba(228,228,231,0.5); text-align: center; padding: 0; }
+    tbody tr:nth-child(even) { background: rgba(244,244,245,0.5); }
+    tbody tr.dragging { opacity: 0.4; }
+    tbody tr.drag-over { border-top: 2px solid var(--accent); }
+
+    .cell-input {
+      width: 100%; border: none; background: transparent; text-align: center;
+      font-size: 13px; padding: 7px 4px; outline: none; font-family: inherit;
+      min-width: 48px;
+    }
+    .cell-input.name-input { min-width: 70px; text-align: right; padding-right: 6px; }
+    .cell-input.addition { color: var(--destructive); font-weight: 700; }
+    .cell-readonly {
+      padding: 7px 6px; font-size: 13px; background: rgba(244,244,245,0.7); min-width: 48px;
+    }
+    .cell-total { background: rgba(26,110,60,0.1) !important; font-weight: 700; color: var(--primary); }
+    .delete-btn {
+      background: none; border: none; color: rgba(220,38,38,0.5); cursor: pointer;
+      padding: 6px 4px; transition: color .2s; font-size: 14px; line-height: 1;
+    }
+    .delete-btn:hover { color: var(--destructive); }
+    .grip { color: rgba(113,113,122,0.4); cursor: grab; padding: 6px 2px; touch-action: none; font-size: 14px; }
+    .grip:active { cursor: grabbing; }
+
+    /* Add row */
+    .add-row-btn {
+      width: 100%; padding: 12px; background: none; border: none; border-top: 1px solid var(--border);
+      color: var(--accent); font-weight: 700; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .2s;
+    }
+    .add-row-btn:hover { background: rgba(212,160,23,0.08); }
+    .add-row-btn svg { width: 18px; height: 18px; }
+
+    /* Summary */
+    .summary {
+      border-top: 2px solid rgba(26,110,60,0.2);
+      padding: 12px; background: rgba(244,244,245,0.4); space-y: 8px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .summary-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .summary-label { font-size: 14px; font-weight: 700; color: #52525b; white-space: nowrap; }
+    .summary-val {
+      font-size: 14px; font-weight: 900; padding: 5px 12px; border-radius: 8px; min-width: 80px; text-align: center;
+    }
+    .summary-val.green { background: var(--primary-light); color: var(--primary); }
+    .summary-val.yellow { background: var(--accent-light); color: #92400e; }
+    .summary-input {
+      width: 110px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+      text-align: center; font-size: 14px; font-weight: 700; font-family: inherit;
+      background: var(--card); outline: none;
+    }
+    .summary-input:focus { border-color: var(--primary); }
+
+    /* Notes */
+    .notes-area {
+      margin: 0 8px 8px;
+      background: var(--card); border-radius: 0 0 12px 12px;
+      border-top: 1px solid rgba(228,228,231,0.5);
+      padding: 12px;
+    }
+    .notes-area.export-empty { display: none; }
+    .notes-inner { display: flex; gap: 8px; align-items: flex-start; }
+    .notes-label { font-size: 13px; font-weight: 700; white-space: nowrap; padding-top: 6px; }
+    .notes-input {
+      flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+      font-size: 13px; resize: none; min-height: 44px; font-family: inherit;
+      background: var(--bg); outline: none; direction: rtl;
+    }
+    .notes-input:focus { border-color: var(--primary); }
+
+    /* Dialogs */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .overlay.open { display: flex; }
+    .dialog {
+      background: var(--card); border-radius: 16px; padding: 24px;
+      max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: popIn .15s ease;
+    }
+    @keyframes popIn { from { opacity:0; transform: scale(.95); } to { opacity:1; transform: none; } }
+    .dialog h3 { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+    .dialog p { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+    .dialog-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn {
+      padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 700;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-cancel { background: var(--muted); color: var(--text); }
+    .btn-destructive { background: var(--destructive); color: white; }
+    .btn-cancel:hover { background: var(--border); }
+    .btn-destructive:hover { opacity: 0.9; }
+
+    /* Calculator */
+    #calc-overlay .dialog { max-width: 320px; }
+    .calc-display {
+      background: var(--muted); border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      text-align: left; direction: ltr; min-height: 70px;
+    }
+    .calc-main { font-size: 32px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .calc-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; min-height: 16px; }
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .calc-btn {
+      border: none; border-radius: 12px; height: 56px; font-size: 20px; font-weight: 800;
+      cursor: pointer; transition: all .1s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .calc-btn:active { transform: scale(0.93); }
+    .calc-btn.num { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .calc-btn.op { background: var(--accent-light); color: var(--accent); }
+    .calc-btn.eq { background: var(--primary); color: white; }
+    .calc-btn.clr { background: #fee2e2; color: var(--destructive); }
+    .calc-btn.bk { background: var(--muted); color: var(--text); font-size: 16px; }
+    .calc-close { width: 100%; margin-top: 12px; padding: 10px; background: var(--muted); border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+    /* Export-hide: hidden in export */
+    @media print { .export-hide { display: none !important; } }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <h1>حساب المبيعات (نادي الأعوان)</h1>
+  <div class="header-btns">
+    <button class="icon-btn export-hide" onclick="openCalc()" title="آلة حاسبة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="14" y1="18" x2="16" y2="18"/></svg>
+    </button>
+    <button class="icon-btn export-hide" onclick="exportPng()" title="تصدير كصورة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <button class="icon-btn export-hide" onclick="shareImage()" title="مشاركة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </button>
+    <button class="icon-btn export-hide" onclick="toggleSettings()" title="إعدادات">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Settings -->
+<div id="settings-panel">
+  <p class="settings-label">اختر الفصيلة:</p>
+  <div class="shift-btns">
+    <button class="shift-btn" id="btn-A" onclick="setShift('A')">فصيلة A</button>
+    <button class="shift-btn" id="btn-B" onclick="setShift('B')">فصيلة B</button>
+    <button class="shift-btn" id="btn-C" onclick="setShift('C')">فصيلة C</button>
+  </div>
+</div>
+
+<!-- Exportable Area -->
+<div id="export-area">
+  <!-- Date Navigation -->
+  <div class="date-nav">
+    <button class="nav-btn export-hide" id="btn-next" onclick="changeOffset(1)">&#8249;</button>
+    <div class="date-display">
+      <p id="date-text"></p>
+    </div>
+    <button class="nav-btn export-hide" id="btn-prev" onclick="changeOffset(-1)">&#8250;</button>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="table-controls export-hide">
+      <button class="ctrl-btn undo" id="undo-btn" onclick="doUndo()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+        تراجع
+      </button>
+      <button class="ctrl-btn reset" onclick="confirmReset()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        تصفير
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="export-hide"></th>
+            <th class="export-hide"></th>
+            <th>السلعة</th>
+            <th>الثمن</th>
+            <th class="sep">العدد</th>
+            <th>اضافة</th>
+            <th class="sep">الباقي</th>
+            <th>الفرق</th>
+            <th class="sep">المجموع</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn export-hide" onclick="addRow()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      إضافة سطر جديد
+    </button>
+    <div class="summary">
+      <div class="summary-row">
+        <span class="summary-label">المبلغ المدفوع</span>
+        <input class="summary-input" type="number" id="amount-paid" inputmode="numeric" value="0" onchange="setAmountPaid(this.value)" onfocus="this.select()" />
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">المجموع</span>
+        <span class="summary-val green" id="grand-total">0</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">الباقي</span>
+        <span class="summary-val yellow" id="balance">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="notes-area" id="notes-area">
+    <div class="notes-inner">
+      <span class="notes-label">ملاحظة:</span>
+      <textarea class="notes-input" id="notes-input" placeholder="اكتب ملاحظة هنا..." rows="2" oninput="setNotes(this.value)" dir="rtl"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Dialog -->
+<div class="overlay" id="delete-overlay">
+  <div class="dialog">
+    <h3>تأكيد الحذف</h3>
+    <p>هل أنت متأكد من حذف هذا السطر؟ يمكنك التراجع بعد الحذف.</p>
+    <div class="dialog-btns">
+      <button class="btn btn-cancel" onclick="closeDialog('delete-overlay')">إلغاء</button>
+      <button class="btn btn-destructive" onclick="confirmDelete()">حذف</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Confirm Dialog -->
+<div class="overlay" id="reset-overlay">
+  <div class="dialog">
+    <h3>تأكيد التصفير</h3>
+    <p>سيتم تصفير أعمدة العدد والإضافة والباقي لجميع الأسطر. يمكنك التراجع بعد التصفير.</p>
+    <div class="dialog-btns">
+      <button class="btn btn-cancel" onclick="closeDialog('reset-overlay')">إلغاء</button>
+      <button class="btn btn-destructive" onclick="doReset()">تصفير</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calculator -->
+<div class="overlay" id="calc-overlay">
+  <div class="dialog">
+    <h3 style="text-align:center;margin-bottom:12px;">آلة حاسبة</h3>
+    <div class="calc-display">
+      <div class="calc-main" id="calc-display">0</div>
+      <div class="calc-sub" id="calc-sub"></div>
+    </div>
+    <div class="calc-grid" id="calc-grid"></div>
+    <button class="calc-close" onclick="closeDialog('calc-overlay')">إغلاق</button>
+  </div>
+</div>
+
+<script>
+// ============ MODELS ============
+const STORAGE_PREFIX = 'sales_';
+const SHIFT_KEY = 'shift_group';
+const MAX_BACK = 10;
+const MAX_UNDO = 20;
+
+function createId() { return Math.random().toString(36).substring(2, 9); }
+
+function dateToStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateAr(dateStr) {
+  const d = new Date(dateStr);
+  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  return `${days[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function getShiftForDate(dateStr, group) {
+  const refDate = new Date(2026, 2, 2);
+  const target = new Date(dateStr);
+  const diffDays = Math.floor((target - refDate) / 86400000);
+  const idx = ((diffDays % 3) + 3) % 3;
+  return ['A','B','C'][idx];
+}
+
+function getLatestShiftDate(group) {
+  const today = new Date();
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const ds = dateToStr(d);
+    if (getShiftForDate(ds, group) === group) return ds;
+  }
+  return dateToStr(today);
+}
+
+function calcDiff(row, allRows) {
+  const base = (row.quantity||0) + (row.addition||0) - (row.remaining||0);
+  if (allRows && row.name.trim() === 'قوبلي') {
+    const tea = allRows.find(r => r.name.trim() === 'شاي');
+    const ginger = allRows.find(r => r.name.trim() === 'زنجبيل');
+    const r = base - (tea ? calcDiff(tea) : 0) - (ginger ? calcDiff(ginger) : 0);
+    return Math.max(r, 0);
+  }
+  return base;
+}
+function calcRowTotal(row, allRows) { return calcDiff(row, allRows) * (row.price||0); }
+function calcGrandTotal(rows) { return rows.reduce((s, r) => s + calcRowTotal(r, rows), 0); }
+
+// ============ STORAGE ============
+function saveDay(data) { localStorage.setItem(STORAGE_PREFIX + data.date, JSON.stringify(data)); }
+function loadDay(date) {
+  const raw = localStorage.getItem(STORAGE_PREFIX + date);
+  return raw ? JSON.parse(raw) : null;
+}
+function getShiftGroup() { return localStorage.getItem(SHIFT_KEY) || 'A'; }
+function saveShiftGroup(g) { localStorage.setItem(SHIFT_KEY, g); }
+
+function getDefaultRows() {
+  const defaults = [
+    ['قهوة k',45],['ماء',35],['رامي',45],['فرحة',25],['TNT',55],['بيتر',40],
+    ['PEPSI',40],['حمود k',45],['حمود',40],['coca kola',50],['رامي شعير',60],
+    ['ك.ع',20],['ك.شكولة',45],['ك.تويست',40],['قوفريط',10],['مادلان بيفا',35],
+    ['مادلان',20],['ساقا',20],['بيتزا',15],['flaon',35],['قلب اللوز',25],
+    ['جبن عادي',10],['جبن البقرة',15],['تونة',80],['شكولا',5],['شامية كبيرة',60],
+    ['شامية صغيرة',10],['ساندو سناك',35],['ساندو',45],['سراج',140],
+    ['معجون اسنان',125],['فرشاة اسنان',140],['صابون',75],['شامبوان',10],
+    ['جوطابل',45],['ورق مزدوج',10],['قلم ازرق',25],['مناديل ورقية',15],
+    ['زنجبيل',20],['شاي',10],['قوبلي',5],['لوز + كاجو',100],
+    ['كاوكاو .(ص)',10],['كاوكاو . (ك)',60],['يابورت',25],['فرماج',45],
+  ];
+  return defaults.map(([name, price]) => ({ id: createId(), name, price, quantity:0, addition:0, remaining:0 }));
+}
+
+function carryOver(rows) {
+  return rows.map(r => ({ id: createId(), name: r.name, price: r.price, quantity:0, addition:0, remaining:0 }));
+}
+
+function initDay(dateStr, prevRows) {
+  const existing = loadDay(dateStr);
+  if (existing) return existing;
+  if (prevRows && prevRows.length > 0) return { date: dateStr, rows: carryOver(prevRows), amountPaid:0, discount:0, notes:'' };
+  const d = new Date(dateStr);
+  for (let i = 1; i <= 30; i++) {
+    const prev = new Date(d); prev.setDate(prev.getDate() - i);
+    const pd = loadDay(dateToStr(prev));
+    if (pd) return { date: dateStr, rows: carryOver(pd.rows), amountPaid:0, discount:0, notes:'' };
+  }
+  return { date: dateStr, rows: getDefaultRows(), amountPaid:0, discount:0, notes:'' };
+}
+
+function purgeOldData(refDateStr) {
+  const ref = new Date(refDateStr); ref.setDate(ref.getDate() - 30);
+  const toDelete = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX)) {
+      const d = new Date(k.replace(STORAGE_PREFIX, ''));
+      if (!isNaN(d.getTime()) && d < ref) toDelete.push(k);
+    }
+  }
+  toDelete.forEach(k => localStorage.removeItem(k));
+}
+
+// ============ APP STATE ============
+let shiftGroup = getShiftGroup();
+let offset = 0;
+let currentData = null;
+let undoStack = [];
+let deleteTarget = null;
+let saveTimer = null;
+
+function getCurrentDateStr() {
+  const base = getLatestShiftDate(shiftGroup);
+  const d = new Date(base);
+  d.setDate(d.getDate() + offset * 3);
+  return dateToStr(d);
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveDay(currentData), 300);
+}
+
+function pushUndo() {
+  undoStack = [...undoStack.slice(-(MAX_UNDO - 1)), JSON.parse(JSON.stringify(currentData))];
+  document.getElementById('undo-btn').disabled = false;
+}
+
+function doUndo() {
+  if (!undoStack.length) return;
+  currentData = undoStack.pop();
+  if (!undoStack.length) document.getElementById('undo-btn').disabled = true;
+  render();
+  scheduleSave();
+}
+
+function loadCurrentDay() {
+  const dateStr = getCurrentDateStr();
+  currentData = initDay(dateStr, currentData ? currentData.rows : null);
+  undoStack = [];
+  document.getElementById('undo-btn').disabled = true;
+  purgeOldData(dateStr);
+}
+
+// ============ SHIFT & DATE ============
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  p.classList.toggle('open');
+}
+function setShift(g) {
+  if (currentData) { saveDay(currentData); }
+  shiftGroup = g;
+  saveShiftGroup(g);
+  offset = 0;
+  document.getElementById('settings-panel').classList.remove('open');
+  loadCurrentDay();
+  render();
+}
+function changeOffset(delta) {
+  const newOffset = offset + delta;
+  if (newOffset > 0 || newOffset < -MAX_BACK) return;
+  saveDay(currentData);
+  offset = newOffset;
+  loadCurrentDay();
+  render();
+}
+
+// ============ DATA OPS ============
+function updateRow(id, field, value) {
+  pushUndo();
+  currentData.rows = currentData.rows.map(r => {
+    if (r.id !== id) return r;
+    const v = field === 'name' ? value : (parseFloat(value) || 0);
+    return { ...r, [field]: v };
+  });
+  scheduleSave();
+  renderTotals();
+}
+
+function addRow() {
+  pushUndo();
+  currentData.rows.push({ id: createId(), name:'', price:0, quantity:0, addition:0, remaining:0 });
+  scheduleSave();
+  renderTable();
+}
+
+function deleteRow(id) {
+  pushUndo();
+  currentData.rows = currentData.rows.filter(r => r.id !== id);
+  deleteTarget = null;
+  scheduleSave();
+  renderTable();
+}
+
+function setAmountPaid(v) {
+  pushUndo();
+  currentData.amountPaid = parseFloat(v) || 0;
+  scheduleSave();
+  renderSummary();
+}
+
+function setNotes(v) {
+  currentData.notes = v;
+  scheduleSave();
+}
+
+function resetColumns() {
+  pushUndo();
+  currentData.rows = currentData.rows.map(r => ({ ...r, quantity:0, addition:0, remaining:0 }));
+  currentData.amountPaid = 0;
+  scheduleSave();
+  renderTable();
+}
+
+function reorderRows(from, to) {
+  pushUndo();
+  const arr = [...currentData.rows];
+  const [moved] = arr.splice(from, 1);
+  arr.splice(to, 0, moved);
+  currentData.rows = arr;
+  scheduleSave();
+  renderTable();
+}
+
+// ============ DIALOGS ============
+let pendingDeleteId = null;
+function confirmDelete(id) {
+  if (id) pendingDeleteId = id;
+  document.getElementById('delete-overlay').classList.add('open');
+}
+function confirmDelete2() {
+  if (pendingDeleteId) deleteRow(pendingDeleteId);
+  pendingDeleteId = null;
+  closeDialog('delete-overlay');
+}
+document.getElementById('delete-overlay').querySelector('.btn-destructive').onclick = confirmDelete2;
+
+function confirmReset() { document.getElementById('reset-overlay').classList.add('open'); }
+function doReset() { resetColumns(); closeDialog('reset-overlay'); }
+
+function closeDialog(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+
+// ============ RENDER ============
+let dragFrom = null;
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const FIELDS = ['name','price','quantity','addition','remaining'];
+  const SEP_BEFORE = new Set(['quantity','remaining']);
+
+  tbody.innerHTML = '';
+  currentData.rows.forEach((row, idx) => {
+    const diff = calcDiff(row, currentData.rows);
+    const total = calcRowTotal(row, currentData.rows);
+    const tr = document.createElement('tr');
+    tr.dataset.idx = idx;
+    tr.setAttribute('draggable', 'true');
+
+    // Drag events
+    tr.addEventListener('dragstart', () => { dragFrom = idx; tr.classList.add('dragging'); });
+    tr.addEventListener('dragend', () => { tr.classList.remove('dragging'); document.querySelectorAll('#table-body tr').forEach(r => r.classList.remove('drag-over')); });
+    tr.addEventListener('dragover', e => { e.preventDefault(); document.querySelectorAll('#table-body tr').forEach(r => r.classList.remove('drag-over')); tr.classList.add('drag-over'); });
+    tr.addEventListener('drop', () => { if (dragFrom !== null && dragFrom !== idx) reorderRows(dragFrom, idx); dragFrom = null; });
+
+    // Delete btn
+    const delTd = document.createElement('td');
+    delTd.className = 'export-hide';
+    delTd.innerHTML = `<button class="delete-btn" onclick="confirmDelete('${row.id}')">✕</button>`;
+    tr.appendChild(delTd);
+
+    // Grip
+    const gripTd = document.createElement('td');
+    gripTd.className = 'export-hide';
+    gripTd.innerHTML = `<span class="grip" title="اسحب لإعادة الترتيب">⋮⋮</span>`;
+    // Touch drag
+    let touchFromIdx = null;
+    gripTd.querySelector('.grip').addEventListener('touchstart', () => { touchFromIdx = idx; });
+    gripTd.querySelector('.grip').addEventListener('touchend', e => {
+      const t = e.changedTouches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const targetTr = el && el.closest('tr[data-idx]');
+      if (targetTr && touchFromIdx !== null) {
+        const toIdx = parseInt(targetTr.dataset.idx);
+        if (toIdx !== touchFromIdx) reorderRows(touchFromIdx, toIdx);
+      }
+      touchFromIdx = null;
+    }, { passive: true });
+    tr.appendChild(gripTd);
+
+    // Fields
+    FIELDS.forEach(field => {
+      const td = document.createElement('td');
+      if (SEP_BEFORE.has(field)) td.className = 'sep-d';
+      const inp = document.createElement('input');
+      inp.className = 'cell-input' + (field === 'name' ? ' name-input' : '') + (field === 'addition' ? ' addition' : '');
+      inp.type = 'text';
+      inp.inputMode = field === 'name' ? 'text' : 'decimal';
+      inp.value = field === 'name' ? row[field] : (row[field] || '');
+      inp.dataset.rowId = row.id;
+      inp.dataset.field = field;
+      inp.addEventListener('change', e => updateRow(row.id, field, e.target.value));
+      inp.addEventListener('focus', e => e.target.select());
+      // Enter -> next row same field
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const nextRow = tbody.querySelector(`tr[data-idx="${idx+1}"] input[data-field="${field}"]`);
+          if (nextRow) nextRow.focus();
+        }
+      });
+      td.appendChild(inp); tr.appendChild(td);
+    });
+
+    // Diff
+    const diffTd = document.createElement('td');
+    diffTd.className = 'cell-readonly sep-d';
+    diffTd.textContent = diff || '';
+    tr.appendChild(diffTd);
+
+    // Total
+    const totTd = document.createElement('td');
+    totTd.className = 'cell-readonly cell-total sep-d';
+    totTd.textContent = total || '';
+    tr.appendChild(totTd);
+
+    tbody.appendChild(tr);
+  });
+
+  renderSummary();
+}
+
+function renderTotals() {
+  // Update diff/total cells
+  const rows = document.querySelectorAll('#table-body tr');
+  rows.forEach((tr, idx) => {
+    const row = currentData.rows[idx];
+    if (!row) return;
+    const cells = tr.querySelectorAll('.cell-readonly');
+    if (cells[0]) cells[0].textContent = calcDiff(row, currentData.rows) || '';
+    if (cells[1]) cells[1].textContent = calcRowTotal(row, currentData.rows) || '';
+    // Also update other cell inputs in case of قوبلي dependency
+  });
+  renderSummary();
+}
+
+function renderSummary() {
+  const grand = calcGrandTotal(currentData.rows);
+  document.getElementById('grand-total').textContent = grand;
+  document.getElementById('balance').textContent = (currentData.amountPaid||0) - grand;
+  document.getElementById('amount-paid').value = currentData.amountPaid || '';
+}
+
+function render() {
+  // Update shift buttons
+  ['A','B','C'].forEach(g => {
+    const btn = document.getElementById('btn-' + g);
+    btn.className = 'shift-btn' + (shiftGroup === g ? ' active-' + g : '');
+  });
+
+  // Date
+  const dateStr = getCurrentDateStr();
+  document.getElementById('date-text').textContent = formatDateAr(dateStr);
+  document.getElementById('btn-prev').disabled = offset <= -MAX_BACK;
+  document.getElementById('btn-next').disabled = offset >= 0;
+
+  // Notes
+  document.getElementById('notes-input').value = currentData.notes || '';
+  const notesArea = document.getElementById('notes-area');
+  notesArea.classList.toggle('export-empty', !currentData.notes);
+
+  renderTable();
+}
+
+// ============ EXPORT / SHARE ============
+async function captureImage() {
+  const area = document.getElementById('export-area');
+  // Hide export-hide elements
+  const hidden = area.querySelectorAll('.export-hide');
+  hidden.forEach(el => el.style.display = 'none');
+
+  // Use html2canvas via CDN
+  const canvas = await window.html2canvas(area, {
+    backgroundColor: '#f5f0e8',
+    scale: 2,
+    useCORS: true,
+    logging: false,
+  });
+  hidden.forEach(el => el.style.display = '');
+  return canvas;
+}
+
+async function exportPng() {
+  if (!window.html2canvas) { alert('جاري التحميل...'); return; }
+  try {
+    const canvas = await captureImage();
+    const link = document.createElement('a');
+    link.download = `EL-NADI/${getCurrentDateStr()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(e) { console.error(e); }
+}
+
+async function shareImage() {
+  if (!window.html2canvas) { alert('جاري التحميل...'); return; }
+  try {
+    const canvas = await captureImage();
+    const dateStr = getCurrentDateStr();
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], `sales-${dateStr}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `مبيعات ${formatDateAr(dateStr)}` });
+      } else {
+        window.open(`https://wa.me/?text=${encodeURIComponent(`مبيعات ${formatDateAr(dateStr)}`)}`, '_blank');
+      }
+    });
+  } catch(e) { console.error(e); }
+}
+
+// Load html2canvas lazily
+function loadHtml2Canvas() {
+  if (window.html2canvas) return;
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  document.head.appendChild(s);
+}
+document.querySelectorAll('.icon-btn').forEach(b => b.addEventListener('mouseenter', loadHtml2Canvas, { once: true }));
+document.querySelectorAll('.icon-btn').forEach(b => b.addEventListener('touchstart', loadHtml2Canvas, { once: true, passive: true }));
+
+// ============ CALCULATOR ============
+const calcBtns = [
+  ['C','⌫','%','÷'],
+  ['7','8','9','×'],
+  ['4','5','6','-'],
+  ['1','2','3','+'],
+  ['00','0','.','='],
+];
+let calcDisplay = '0', calcPrev = null, calcOp = null, calcReset = false;
+
+function openCalc() {
+  document.getElementById('calc-overlay').classList.add('open');
+  renderCalc();
+}
+function updateCalcDisplay() {
+  document.getElementById('calc-display').textContent = calcDisplay;
+  document.getElementById('calc-sub').textContent = calcPrev !== null && calcOp ? `${calcPrev} ${calcOp}` : '';
+}
+function calcPress(btn) {
+  if (btn === 'C') { calcDisplay='0'; calcPrev=null; calcOp=null; calcReset=false; }
+  else if (btn === '⌫') { calcDisplay = calcDisplay.length > 1 ? calcDisplay.slice(0,-1) : '0'; }
+  else if (['+','-','×','÷','%'].includes(btn)) { calcPrev=parseFloat(calcDisplay); calcOp=btn; calcReset=true; }
+  else if (btn === '=') {
+    if (calcPrev !== null && calcOp) {
+      const cur = parseFloat(calcDisplay);
+      let res = 0;
+      if (calcOp==='+') res = calcPrev+cur;
+      else if (calcOp==='-') res = calcPrev-cur;
+      else if (calcOp==='×') res = calcPrev*cur;
+      else if (calcOp==='÷') res = cur!==0 ? calcPrev/cur : 0;
+      else if (calcOp==='%') res = calcPrev*(cur/100);
+      calcDisplay = String(parseFloat(res.toFixed(8)));
+      calcPrev=null; calcOp=null; calcReset=true;
+    }
+  } else {
+    if (calcReset) { calcDisplay = btn==='.' ? '0.' : btn; calcReset=false; }
+    else {
+      if (btn==='.' && calcDisplay.includes('.')) return;
+      calcDisplay = calcDisplay==='0' && btn!=='.' ? btn : calcDisplay+btn;
+    }
+  }
+  updateCalcDisplay();
+}
+function renderCalc() {
+  const grid = document.getElementById('calc-grid');
+  grid.innerHTML = '';
+  calcBtns.flat().forEach(btn => {
+    const b = document.createElement('button');
+    b.className = 'calc-btn ' + (btn==='=' ? 'eq' : btn==='C' ? 'clr' : btn==='⌫' ? 'bk' : ['+','-','×','÷','%'].includes(btn) ? 'op' : 'num');
+    b.textContent = btn;
+    b.onclick = () => calcPress(btn);
+    grid.appendChild(b);
+  });
+  updateCalcDisplay();
+}
+
+// ============ INIT ============
+loadCurrentDay();
+render();
+</script>
+
+<!-- Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
