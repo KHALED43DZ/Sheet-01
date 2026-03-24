@@ -40,6 +40,8 @@ header h1{font-size:15px;font-weight:900}
 table{width:100%;border-collapse:collapse;font-size:13px}
 thead tr{background:#1a6e3c;color:white}
 th{padding:8px 5px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+th.th-sm{padding:8px 2px;min-width:36px}
+th.th-lg{min-width:100px}
 th.sep{border-right:2px solid rgba(255,255,255,.3)}
 td{border-bottom:1px solid rgba(228,228,231,.5);padding:0;text-align:center}
 td.sep{border-right:2px solid rgba(26,110,60,.25)}
@@ -48,11 +50,30 @@ td.col-hl{background:rgba(26,110,60,0.07)!important}
 tr.odd td.col-hl{background:rgba(26,110,60,0.12)!important}
 td.col-hl input{background:transparent!important}
 th.col-hl{background:rgba(0,0,0,0.12)}
+td.col-red{background:rgba(220,38,38,0.06)!important}
+tr.odd td.col-red{background:rgba(220,38,38,0.11)!important}
+td.col-red input{background:transparent!important}
+th.col-red{background:rgba(180,20,20,0.18)}
+td.col-blue{background:rgba(37,99,235,0.06)!important}
+tr.odd td.col-blue{background:rgba(37,99,235,0.11)!important}
+td.col-blue input{background:transparent!important}
+th.col-blue{background:rgba(20,60,180,0.18)}
+td.col-gold{background:rgba(212,160,23,0.13)!important;border-right:2px solid rgba(212,160,23,0.5)!important;border-left:2px solid rgba(212,160,23,0.5)!important}
+tr.odd td.col-gold{background:rgba(212,160,23,0.2)!important}
+th.col-gold{background:rgba(160,110,0,0.25);border-right:2px solid rgba(212,160,23,0.6)!important;border-left:2px solid rgba(212,160,23,0.6)!important}
+td.col-gold.ct{color:#92400e}
+/* Column borders */
+td.col-hl{border-left:1px solid rgba(26,110,60,0.15)!important;border-right:1px solid rgba(26,110,60,0.15)!important}
+td.col-red{border-left:1px solid rgba(220,38,38,0.15)!important;border-right:1px solid rgba(220,38,38,0.15)!important}
+td.col-red .ci{min-width:36px;max-width:48px}
+td.col-blue .cr{min-width:36px}
+td.col-blue{border-left:1px solid rgba(37,99,235,0.15)!important;border-right:1px solid rgba(37,99,235,0.15)!important}
 tr.dov{border-top:2px solid #d4a017}
 tr.drag{opacity:.4}
 .ci{width:100%;border:none;background:transparent;text-align:center;font-size:13px;padding:7px 4px;outline:none;font-family:inherit;min-width:44px}
-.ci.nm{min-width:72px;text-align:right;padding-right:6px;direction:rtl}
+.ci.nm{min-width:100px;width:100%;text-align:right;padding-right:6px;direction:rtl;font-weight:700}
 .ci.add{color:#dc2626;font-weight:700}
+.ci.fw{font-weight:700}
 .cr{padding:7px 5px;font-size:13px;background:rgba(244,244,245,.7);min-width:44px}
 .ct{padding:7px 5px;font-size:13px;background:rgba(26,110,60,.08);font-weight:700;color:#1a6e3c;min-width:52px}
 .delbtn{background:none;border:none;color:rgba(220,38,38,.45);cursor:pointer;padding:5px 6px;font-size:14px;line-height:1;transition:color .2s}
@@ -65,8 +86,8 @@ tr.drag{opacity:.4}
 .sval{font-size:14px;font-weight:900;padding:5px 12px;border-radius:8px;min-width:80px;text-align:center}
 .sval.g{background:#e8f5ee;color:#1a6e3c}
 .sval.y{background:#fef9e7;color:#92400e}
-.sinp{width:110px;border:1px solid #e4e4e7;border-radius:8px;padding:6px 8px;text-align:center;font-size:14px;font-weight:700;font-family:inherit;background:white;outline:none}
-.sinp:focus{border-color:#1a6e3c}
+.sinp{width:110px;border:2px solid #1a6e3c;border-radius:8px;padding:6px 8px;text-align:center;font-size:14px;font-weight:700;font-family:inherit;background:white;outline:none;box-shadow:0 0 0 3px rgba(26,110,60,0.12)}
+.sinp:focus{border-color:#1a6e3c;box-shadow:0 0 0 4px rgba(26,110,60,0.2)}
 .notes{margin:0 8px 8px;background:white;border-radius:0 0 12px 12px;border-top:1px solid rgba(228,228,231,.5);padding:12px}
 .nin{display:flex;gap:8px;align-items:flex-start}
 .nlb{font-size:13px;font-weight:700;white-space:nowrap;padding-top:6px}
@@ -138,10 +159,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <thead>
         <tr>
           <th></th>
-          <th class="col-hl">السلعة</th><th>الثمن</th>
-          <th class="sep">العدد</th><th>اضافة</th>
-          <th class="sep col-hl">الباقي</th><th>الفرق</th>
-          <th class="sep">المجموع</th>
+          <th class="col-hl th-lg">السلعة</th><th>الثمن</th>
+          <th class="sep col-hl">العدد</th><th class="col-red th-sm">اضافة</th>
+          <th class="sep col-hl">الباقي</th><th class="col-blue th-sm">الفرق</th>
+          <th class="sep col-gold">المجموع</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -359,9 +380,10 @@ function renderTable(){
     FIELDS.forEach(f=>{
       const td=document.createElement('td');
       if(SEP.has(f))td.className='sep';
-      if(f==='name'||f==='remaining')td.className=(td.className+' col-hl').trim();
+      if(f==='name'||f==='remaining'||f==='quantity')td.className=(td.className+' col-hl').trim();
+      if(f==='addition'){td.className=(td.className+' col-red').trim();td.style.width='44px';}
       const inp=document.createElement('input');
-      inp.className='ci'+(f==='name'?' nm':'')+(f==='addition'?' add':'');
+      inp.className='ci'+(f==='name'?' nm':'')+(f==='addition'?' add':'')+(f==='quantity'||f==='remaining'?' fw':'');
       inp.type='text';
       inp.inputMode=f==='name'?'text':'decimal';
       inp.value=f==='name'?row[f]:(row[f]||'');
@@ -379,9 +401,9 @@ function renderTable(){
     });
 
     // diff
-    const dtd2=document.createElement('td');dtd2.className='cr';dtd2.textContent=diff||'';tr.appendChild(dtd2);
+    const dtd2=document.createElement('td');dtd2.className='cr col-blue';dtd2.textContent=diff||'';tr.appendChild(dtd2);
     // total
-    const ttd=document.createElement('td');ttd.className='ct sep';ttd.textContent=tot||'';tr.appendChild(ttd);
+    const ttd=document.createElement('td');ttd.className='ct sep col-gold';ttd.textContent=tot||'';tr.appendChild(ttd);
     tb.appendChild(tr);
   });
   renderSummary();
