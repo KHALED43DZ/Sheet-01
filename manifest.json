@@ -3,10 +3,13 @@
   "short_name": "المبيعات",
   "description": "تطبيق حساب مبيعات نادي الأعوان",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f0e8",
   "theme_color": "#1a6e3c",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
   "icons": [
     {
       "src": "icon-192.png",
